@@ -9,17 +9,18 @@ use std::path::PathBuf;
 use windows::Win32::Foundation::{HWND, MAX_PATH};
 use windows::Win32::UI::Shell;
 
-struct SharedMemory {
+pub struct SharedMemory {
     map_view: MEMORY_MAPPED_VIEW_ADDRESS,
     game_can: HANDLE,
     game_did: HANDLE,
-    launcher_can: HANDLE,
-    launcher_did: HANDLE,
     save_dir: PathBuf,
 }
 
 impl SharedMemory {
     pub fn new(is_cw: bool) -> Option<Self> {
+        if !is_cw {
+            return None // For now we only try to communicate with the game if it's the CW
+        }
         let save_dir = save_path_2013();
 
         if save_dir.is_none() {
@@ -27,13 +28,11 @@ impl SharedMemory {
         }
 
         match Self::create_shared_memory(is_cw) {
-            (Some(map_view), Some(game_can), Some(game_did), Some(launcher_can), Some(launcher_did)) => {
+            (Some(map_view), Some(game_can), Some(game_did), Some(_launcher_can), Some(_launcher_did)) => {
                 Some(SharedMemory {
                     map_view,
                     game_can,
                     game_did,
-                    launcher_can,
-                    launcher_did,
                     save_dir: save_dir.unwrap()
                 })
             },
@@ -156,7 +155,7 @@ fn find_user_id(steam_path_2013: PathBuf) -> Option<PathBuf> {
                 match entry {
                     Ok(entry) => {
                         let path = entry.path();
-                        if path.is_dir() && path.file_name().starts_with("user_") {
+                        if path.is_dir() && path.file_name().unwrap().to_string_lossy().starts_with("user_") {
                             return Some(path)
                         }
 

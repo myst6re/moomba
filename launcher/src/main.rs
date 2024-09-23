@@ -95,7 +95,7 @@ fn run() -> std::io::Result<()> {
         let mut child = command.spawn()?;
         info!("Wait for child process...");
         #[cfg(windows)]
-        shared_memory.wait();
+        shared_memory.map(|sm| sm.wait());
         let exit_status = child.wait()?;
         info!("Child process exited with status {}", exit_status);
         Ok(())
